@@ -2,6 +2,8 @@ from . import index_blu
 from flask import render_template, session, current_app, request, jsonify
 from info.models import User, News, Category
 from info.utils.response_code import RET
+from flask import g
+from info.utils.common import user_login_data
 
 
 # 测试
@@ -18,14 +20,19 @@ from info.utils.response_code import RET
 
 
 @index_blu.route('/')
+@user_login_data
 def index():
     # 获取到当前登录用户的id
-    user_id = session.get("user_id")
-    user = None
-    try:
-        user = User.query.filter_by(id=user_id).first()
-    except Exception as e:
-        current_app.logger.error(e)
+    # user_id = session.get('user_id', None)
+    # user = None
+    # if user_id:
+    #     try:
+    #         user = User.query.get(user_id)
+    #     except Exception as e:
+    #         current_app.logger.error(e)
+
+    # 使用g变量获取用户登陆信息
+    user = g.user
     # 右侧新闻排行
     clicks_news = []
     try:
@@ -39,7 +46,6 @@ def index():
         clicks_news_dict = news_abj.to_basic_dict()
         clicks_news_li.append(clicks_news_dict)
 
-
     # 获取新闻分类数据
     category_all = Category.query.all()
     # 定义列表保存分类数据
@@ -48,13 +54,53 @@ def index():
         category_dict = category_abj.to_dict()
         categories.append(category_dict)
     # 拼接内容
-	# 返回数据
+    # 返回数据
     data = {
-        "user":user,
-        "news_dict":clicks_news_li,
-        "categories":categories
+        "user": user.to_dict() if user else None,
+        "news_dict": clicks_news_li,
+        "categories": categories
     }
-    return render_template('news/index.html',data=data)
+    return render_template('news/index.html', data=data)
+
+
+# @index_blu.route('/')
+# def index():
+#     # 获取到当前登录用户的id
+#     user_id = session.get("user_id")
+#     user = None
+#     try:
+#         user = User.query.filter_by(id=user_id).first()
+#     except Exception as e:
+#         current_app.logger.error(e)
+#     # 右侧新闻排行
+#     clicks_news = []
+#     try:
+#         clicks_news = News.query.order_by(News.clicks.desc()).limit(10).all()
+#     except Exception as e:
+#         current_app.logger.error(e)
+#     # 按照点击量排序查询出点击最高的前10条新闻
+#     # 将对象字典添加到列表中
+#     clicks_news_li = []
+#     for news_abj in clicks_news:
+#         clicks_news_dict = news_abj.to_basic_dict()
+#         clicks_news_li.append(clicks_news_dict)
+#
+#
+#     # 获取新闻分类数据
+#     category_all = Category.query.all()
+#     # 定义列表保存分类数据
+#     categories = []
+#     for category_abj in category_all:
+#         category_dict = category_abj.to_dict()
+#         categories.append(category_dict)
+#     # 拼接内容
+# 	# 返回数据
+#     data = {
+#         "user":user,
+#         "news_dict":clicks_news_li,
+#         "categories":categories
+#     }
+#     return render_template('news/index.html',data=data)
 
 
 @index_blu.route('/news_list')
@@ -65,7 +111,7 @@ def news_list():
     """
 
     # 1. 获取参数,并指定默认为最新分类,第一页,一页显示10条数据
-    cid = request.args.get("cid",'5')
+    cid = request.args.get("cid",'1')
     page = request.args.get("page",'1')
     per_page = request.args.get("per_page",'10')
 
@@ -76,12 +122,13 @@ def news_list():
         return jsonify(errno=RET.DATAERR,errmsg="数据转化错误")
 
 	  # 默认选择最新数据分类
-    filters = [News.category_id==5]
     # 3. 查询数据
-    if cid > 5:
-        filters.append(News.category_id==cid)
-    # 按照分类id进行过滤，按新闻发布时间排序，对查询数据进行分类
-    paginate = News.query.filter(*filters).order_by(News.create_time.desc()).paginate(page,per_page,False)
+    if cid ==1:
+        paginate = News.query.order_by(News.create_time.desc()).paginate(page, per_page, False)
+    else:
+        # 按照分类id进行过滤，按新闻发布时间排序，对查询数据进行分类
+
+        paginate = News.query.filter(News.category_id==cid,News.status==0).paginate(page,per_page,False)
     # paginate(页数，每页显示多少条，分页异常不报错）
     # 获取分页后的新闻数据模型对象，总页数及当前页数
     news_list = paginate.items  #模型对象
@@ -90,7 +137,7 @@ def news_list():
     # 将模型对象列表转成字典列表
     news_dict_list = []
     for news in news_list:
-        news_dict_list.append(news.to_dict())
+        news_dict_list.append(news.to_basic_dict())
 
 
 	#返回数据

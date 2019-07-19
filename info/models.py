@@ -18,7 +18,7 @@ tb_user_collection = db.Table(
     db.Column("news_id", db.Integer, db.ForeignKey("info_news.id"), primary_key=True),  # 分类编号
     db.Column("create_time", db.DateTime, default=datetime.now)  # 收藏创建时间
 )
-
+# 用户关注表，建立用户与其关注与被关注的关系
 tb_user_follows = db.Table(
     "info_user_fans",
     db.Column('follower_id', db.Integer, db.ForeignKey('info_user.id'), primary_key=True),  # 粉丝id
@@ -38,7 +38,7 @@ class User(BaseModel, db.Model):
     last_login = db.Column(db.DateTime, default=datetime.now)  # 最后一次登录时间
     is_admin = db.Column(db.Boolean, default=False)
     signature = db.Column(db.String(512))  # 用户签名
-    gender = db.Column(  # 订单的状态
+    gender = db.Column(  # 性别
         db.Enum(
             "MAN",  # 男
             "WOMAN"  # 女

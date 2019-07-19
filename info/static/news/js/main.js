@@ -244,6 +244,9 @@ function sendSMSCode() {
         url: '/passport/sms_code',
         // 请求方式
         type: 'post',
+        headers: {
+        "X-CSRFToken": getCookie("csrf_token")
+    },
         // 请求参数
         data: JSON.stringify(params),
         // 数据类型

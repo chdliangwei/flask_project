@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 
-from flask import Flask
+from flask import Flask, render_template, g
 # 可以用来指定 session 保存的位置
 from flask_wtf import CSRFProtect
 from flask_session import Session
@@ -12,6 +12,8 @@ from redis import StrictRedis
 from config import config
 
 # 初始化数据库
+from info.utils.common import user_login_data
+
 db = SQLAlchemy()
 
 # 变量注释,指定变量类型(使用全局变量无法智能提示时)
@@ -55,6 +57,13 @@ def create_app(config_name):
         response.set_cookie("csrf_token", csrf_token)
         return response
 
+    @app.errorhandler(404)
+    @user_login_data
+    def page_not_found(_):
+        user = g.user
+        data = {"user": user.to_dict() if user else None}
+        return render_template('news/404.html', data=data)
+
     # 设置session保存指定位置
     Session(app)
 
@@ -63,10 +72,14 @@ def create_app(config_name):
     app.register_blueprint(index_blu)
     from .modules.passport import passport_blu
     app.register_blueprint(passport_blu)
+    from .modules.news import news_blu
+    app.register_blueprint(news_blu)
+    from .modules.profile import profile_blu
+    app.register_blueprint(profile_blu)
 
     # 注册自定义过滤器
     from info.utils.common import do_index_class
-    app.add_template_filter(do_index_class, "indexClass")
+    app.add_template_filter(do_index_class, "index_class")
 
     return app
 
