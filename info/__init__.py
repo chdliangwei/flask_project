@@ -10,9 +10,8 @@ from flask_wtf.csrf import generate_csrf
 from redis import StrictRedis
 
 from config import config
-
-# 初始化数据库
 from info.utils.common import user_login_data
+# 初始化数据库
 
 db = SQLAlchemy()
 
@@ -57,12 +56,7 @@ def create_app(config_name):
         response.set_cookie("csrf_token", csrf_token)
         return response
 
-    @app.errorhandler(404)
-    @user_login_data
-    def page_not_found(_):
-        user = g.user
-        data = {"user": user.to_dict() if user else None}
-        return render_template('news/404.html', data=data)
+
 
     # 设置session保存指定位置
     Session(app)
@@ -76,10 +70,19 @@ def create_app(config_name):
     app.register_blueprint(news_blu)
     from .modules.profile import profile_blu
     app.register_blueprint(profile_blu)
+    from .modules.admin import admin_blu
+    app.register_blueprint(admin_blu)
 
     # 注册自定义过滤器
     from info.utils.common import do_index_class
     app.add_template_filter(do_index_class, "index_class")
+
+    @app.errorhandler(404)
+    @user_login_data
+    def page_not_found(_):
+        user = g.user
+        data = {"user": user.to_dict() if user else None}
+        return render_template('news/404.html', data=data)
 
     return app
 

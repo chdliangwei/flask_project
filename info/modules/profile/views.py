@@ -299,6 +299,7 @@ def other_info():
 
     # 去查询其他人的用户信息
     other_id = request.args.get("user_id")
+    print(other_id)
 
     if not other_id:
         abort(404)
@@ -334,7 +335,7 @@ def other_news_list():
     # 1. 取参数
     other_id = request.args.get("user_id")
     page = request.args.get("p", 1)
-
+    print(other_id)
     # 2. 判断参数
     try:
         page = int(page)

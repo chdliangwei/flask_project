@@ -151,11 +151,12 @@ def add_news_comment():
         return jsonify(errno=RET.SESSIONERR, errmsg="用户未登录")
     # 获取参数
     news_id = request.json.get("news_id")
-    comment = request.json.get("comment")
-    parent_id = request.json.get("parent_id")
+    content = request.json.get("comment")
+    parent_id = request.json.get("parent_id",None)
+    print(parent_id)
 
     # 判断参数是否正确
-    if not all([news_id,comment]):
+    if not all([news_id,content]):
         return jsonify(errno=RET.NODATA,errmsg="数据不完整")
     try:
         news_id = int(news_id)
@@ -163,39 +164,52 @@ def add_news_comment():
             parent_id = int(parent_id)
     except Exception as e:
         current_app.logger.error(e)
-        return jsonify(errno=RET.DATAERR,errmsg="数据错误")
+        return jsonify(errno=RET.DATAERR,errmsg="数据类型错误")
     # 查询新闻是否存在并校验
     try:
-        news = News.query.get(news_id)
-        print(news)
+        news = News.query.filter(News.id==news_id).all()
+        if not news:
+            return jsonify(errno=RET.NODATA, errmsg="无此项新闻数据")
+        else:
+            news = news[0]
+            if parent_id:
+                p_comment = Comment.query.filter(Comment.id==parent_id).all()
+                print(p_comment)
+                if p_comment:
+                    comment = Comment(parent_id=parent_id,news_id=news.id,user_id=user.id,content=content)
+                else:
+                    comment = Comment(news_id=news.id,user_id=user.id,content=content)
     except Exception as e:
         current_app.logger.error(e)
         return jsonify(errno=RET.DBERR, errmsg="数据库查询错误")
-    if not news:
-        return jsonify(errno=RET.NODATA, errmsg="无此项新闻数据")
+
     # 初始化评论模型，保存数据
+
     try:
-        comment_abj = Comment()
-        comment_abj.user_id = user.id
-        comment_abj.news_id = news_id
-        comment_abj.content = comment
-        if parent_id:
-            comment_abj.parent_id = parent_id
-        db.session.add(comment_abj)
+        # comment_abj = Comment()
+        # comment_abj.user_id = user.id
+        # comment_abj.news_id = news_id
+        # comment_abj.content = comment
+        # if parent_id:
+        #     comment_abj.parent_id = parent_id
+        db.session.add(comment)
         db.session.commit()
     except Exception as e:
         current_app.logger.error(e)
+        db.session.rollback()
         return jsonify(errno=RET.THIRDERR, errmsg="数据库存储错误")
 
     # 配置文件设置了自动提交,自动提交要在return返回结果以后才执行commit命令,如果有回复
     # 评论,先拿到回复评论id,在手动commit,否则无法获取回复评论内容
+
+
     # 返回响应
-    data = {
-        "user":user.to_dict(),
-        "content":comment,
-        "news_id":news_id
-    }
-    return jsonify(errno=RET.OK,errmsg="评论成功",data=data)
+    # data = {
+    #     "user":user.to_dict(),
+    #     "data":comment.to_dict()
+    #
+    # }
+    return jsonify(errno=RET.OK,errmsg="评论成功",data=comment.to_dict())
 
 
 @news_blu.route('/comment_like', methods=["POST"])
@@ -211,6 +225,7 @@ def comment_like():
         return jsonify(errno=RET.SESSIONERR, errmsg="用户未登录")
     # 取到请求参数
     comment_id = request.json.get("comment_id")
+    print("测试")
     print(comment_id)
     action = request.json.get("action")
     # 判断参数

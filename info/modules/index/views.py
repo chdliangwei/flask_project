@@ -124,7 +124,7 @@ def news_list():
 	  # 默认选择最新数据分类
     # 3. 查询数据
     if cid ==1:
-        paginate = News.query.order_by(News.create_time.desc()).paginate(page, per_page, False)
+        paginate = News.query.filter(News.status==0).order_by(News.create_time.desc()).paginate(page, per_page, False)
     else:
         # 按照分类id进行过滤，按新闻发布时间排序，对查询数据进行分类
 
